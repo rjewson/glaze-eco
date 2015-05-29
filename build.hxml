@@ -1,0 +1,8 @@
+-js bin/script.js
+-cp test
+-cp src
+-main test.Test
+-lib glaze-core
+#-debug
+-D analyzer
+-cmd osascript bin/refreshTab
