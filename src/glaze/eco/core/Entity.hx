@@ -12,6 +12,8 @@ using haxe.macro.ExprTools;
 class Entity 
 {
 
+    public var id:Int = 0;
+
     public var map:Dynamic<IComponent> = {};
     public var list:Array<IComponent> = [];
 
@@ -24,20 +26,30 @@ class Entity
         }
     }
 
-    public function addComponent(component:IComponent,match:Bool=true) {
+    public function addComponent(component:IComponent) {
         var name:Dynamic = Reflect.field( Type.getClass(component) , "NAME");
         if (exists(name))
             remove(name,component);
         add(name,component);
-        if (match)
-            engine.matchSystems(this);
+        engine.componentAddedToEntity.dispatch(this,component);
     }
 
     public function addManyComponent(components:Array<IComponent>) {
         for (component in components)
-            addComponent(component,false);
-        engine.matchSystems(this);
+            addComponent(component);
     }
+
+    public function removeComponent(component:IComponent) {
+        var name:Dynamic = Reflect.field( Type.getClass(component) , "NAME");
+        if (exists(name)) {
+            remove(name,component);
+            engine.componentRemovedFromEntity.dispatch(this,component);
+        }
+    }
+
+    // public function removeComponentByClass(componentClass:Class<IComponent>) {
+    //     removeComponent();
+    // }
 
     macro public function getComponent<A:IComponent>(self:Expr,componentClass:ExprOf<Class<A>>):ExprOf<A> {
         var name = macro $componentClass.NAME;

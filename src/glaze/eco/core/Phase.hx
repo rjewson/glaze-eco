@@ -50,10 +50,4 @@ class Phase
         return true;
     }
 
-    public function matchSystems(entity:Entity) {
-        for (system in systems)
-            system.match(entity);
-    }
-
-
 }

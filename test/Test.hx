@@ -19,20 +19,28 @@ class Test
         var system = new TestSystem();
         phase.addSystem(system);
 
-        var entity = engine.create([new TestComponentA("richard"),new TestComponentB()]);
+        var entity = engine.create([new TestComponentA("richard"),new TestComponentB("jewson")]);
 
         // var tc = new TestComponentA();
         // entity.addComponent(tc);
         
-        trace(entity);
+        //trace(entity);
         var tc2 = entity.getComponent(TestComponentA);
-        trace(tc2);
+        //trace(tc2);
         var tc3 = entity.getComponentStr("TestComponentA");
-        trace(tc3);
+        //trace(tc3);
 
         trace(entity.exists("TestComponentA"));
 
-        trace(engine);
+        system.update(0,0);
+
+        entity.removeComponent(entity.getComponent(TestComponentA));
+
+        system.update(0,0);
+
+        entity.removeComponent(entity.getComponent(TestComponentA));
+
+        //trace(engine);
     }
 
     public static function main() {
