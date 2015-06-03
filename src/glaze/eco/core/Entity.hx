@@ -53,11 +53,17 @@ class Entity
 
     macro public function getComponent<A:IComponent>(self:Expr,componentClass:ExprOf<Class<A>>):ExprOf<A> {
         var name = macro $componentClass.NAME;
-        return macro untyped $self.map[$name];
+        //return macro cast untyped $self.map[$name];
+        //return macro $self.get($name);
+        return macro Std.instance($self.get($name), $componentClass);
     }
 
     macro public function getComponentStr(self:Expr,key:String):ExprOf<IComponent> {
         return macro untyped $self.map.$key;
+    }
+
+    public inline function get(key:String):IComponent {
+        return untyped map[key];
     }
 
     public inline function add(key:String, value:IComponent):Void {

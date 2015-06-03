@@ -83,6 +83,7 @@ var glaze_eco_core_Engine = function() {
 	this.phases = [];
 	this.componentAddedToEntity = new glaze_signals_Signal2();
 	this.componentRemovedFromEntity = new glaze_signals_Signal2();
+	this.systemAdded = new glaze_signals_Signal1();
 	this.viewManager = new glaze_eco_core_ViewManager(this);
 };
 glaze_eco_core_Engine.__name__ = true;
@@ -96,6 +97,15 @@ glaze_eco_core_Engine.prototype = {
 		var phase = new glaze_eco_core_Phase(this);
 		this.phases.push(phase);
 		return phase;
+	}
+	,update: function(timestamp,delta) {
+		var _g = 0;
+		var _g1 = this.phases;
+		while(_g < _g1.length) {
+			var phase = _g1[_g];
+			++_g;
+			phase.update(timestamp,delta);
+		}
 	}
 	,__class__: glaze_eco_core_Engine
 };
@@ -143,6 +153,9 @@ glaze_eco_core_Entity.prototype = {
 			this.engine.componentRemovedFromEntity.dispatch(this,component);
 		}
 	}
+	,get: function(key) {
+		return this.map[key];
+	}
 	,add: function(key,value) {
 		this.map[key] = value;
 		this.list.push(value);
@@ -158,18 +171,24 @@ glaze_eco_core_Entity.prototype = {
 };
 var glaze_eco_core_IComponent = function() { };
 glaze_eco_core_IComponent.__name__ = true;
-var glaze_eco_core_Phase = function(engine) {
+var glaze_eco_core_Phase = function(engine,msPerUpdate) {
+	if(msPerUpdate == null) msPerUpdate = 0;
 	this.systems = [];
 	this.engine = engine;
+	this.msPerUpdate = msPerUpdate;
 	this.enabled = true;
-	this.lastTimestamp = 0;
+	this.accumulator = 0;
 };
 glaze_eco_core_Phase.__name__ = true;
 glaze_eco_core_Phase.prototype = {
-	update: function(timestamp) {
+	update: function(timestamp,delta) {
 		if(!this.enabled) return;
-		var delta = this.lastTimestamp == 0?16.6666666666666679:timestamp - this.lastTimestamp;
-		this.lastTimestamp = timestamp;
+		if(this.msPerUpdate != 0) {
+			this.accumulator += delta;
+			if(this.accumulator < this.msPerUpdate) return;
+			this.accumulator -= this.msPerUpdate;
+			delta = this.msPerUpdate;
+		}
 		var _g = 0;
 		var _g1 = this.systems;
 		while(_g < _g1.length) {
@@ -180,47 +199,39 @@ glaze_eco_core_Phase.prototype = {
 	}
 	,addSystem: function(system) {
 		this.systems.push(system);
-		system.onAdded(this.engine);
+		this.engine.systemAdded.dispatch(system);
 	}
 	,addSystemAfter: function(system,after) {
 		var i = HxOverrides.indexOf(this.systems,after,0);
 		if(i < 0) return false;
 		this.systems.splice(i + 1,0,system);
-		system.onAdded(this.engine);
+		this.engine.systemAdded.dispatch(system);
 		return true;
 	}
 	,addSystemBefore: function(system,before) {
 		var i = HxOverrides.indexOf(this.systems,before,0);
 		if(i < 0) return false;
 		this.systems.splice(i,0,system);
-		system.onAdded(this.engine);
+		this.engine.systemAdded.dispatch(system);
 		return true;
 	}
 	,__class__: glaze_eco_core_Phase
 };
-var glaze_eco_core_System = function() {
+var glaze_eco_core_System = function(componentSignature) {
+	this.registeredComponents = componentSignature;
 };
 glaze_eco_core_System.__name__ = true;
 glaze_eco_core_System.prototype = {
 	onAdded: function(engine) {
 		this.engine = engine;
-		this.initializeView();
 	}
 	,onRemoved: function() {
-	}
-	,initializeView: function() {
-		this.view = this.engine.viewManager.getView(this.get_registeredComponents());
-		this.view.entityAdded.add($bind(this,this.entityAdded));
-		this.view.entityRemoved.add($bind(this,this.entityRemoved));
 	}
 	,entityAdded: function(entity,component) {
 	}
 	,entityRemoved: function(entity,component) {
 	}
 	,update: function(timestamp,delta) {
-	}
-	,get_registeredComponents: function() {
-		return [];
 	}
 	,__class__: glaze_eco_core_System
 };
@@ -234,7 +245,6 @@ var glaze_eco_core_View = function(components) {
 glaze_eco_core_View.__name__ = true;
 glaze_eco_core_View.prototype = {
 	addEntity: function(entity,component) {
-		debugger;
 		this.entities.push(entity);
 		this.entityAdded.dispatch(entity,component);
 	}
@@ -249,10 +259,12 @@ var glaze_eco_core_ViewManager = function(engine) {
 	this.engine = engine;
 	engine.componentAddedToEntity.add($bind(this,this.matchViews));
 	engine.componentRemovedFromEntity.add($bind(this,this.unmatchViews));
+	engine.systemAdded.add($bind(this,this.injectView));
 };
 glaze_eco_core_ViewManager.__name__ = true;
 glaze_eco_core_ViewManager.prototype = {
-	getView: function(components) {
+	getView: function(components,forceUpdate) {
+		if(forceUpdate == null) forceUpdate = false;
 		var _g = 0;
 		var _g1 = this.views;
 		while(_g < _g1.length) {
@@ -280,7 +292,10 @@ glaze_eco_core_ViewManager.prototype = {
 			if(__map_reserved[name] != null) tmp1 = _this2.getReserved(name); else tmp1 = _this2.h[name];
 			tmp1.push(view);
 		}
+		if(forceUpdate == true) this.matchAllEntitiesToView(this.engine.entities,view);
 		return view;
+	}
+	,releaseView: function(view) {
 	}
 	,isComponentArrayEqual: function(a,b) {
 		if(a.length != b.length) return false;
@@ -322,6 +337,14 @@ glaze_eco_core_ViewManager.prototype = {
 			}
 		}
 	}
+	,matchAllEntitiesToView: function(entities,view) {
+		var _g = 0;
+		while(_g < entities.length) {
+			var entity = entities[_g];
+			++_g;
+			if(this.entityMatchesView(entity,view.registeredComponents)) view.addEntity(entity,null);
+		}
+	}
 	,unmatchViews: function(entity,component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
 		var tmp;
@@ -336,6 +359,13 @@ glaze_eco_core_ViewManager.prototype = {
 				view.removeEntity(entity,component);
 			}
 		}
+	}
+	,injectView: function(system) {
+		var view = this.getView(system.registeredComponents);
+		view.entityAdded.add($bind(system,system.entityAdded));
+		view.entityRemoved.add($bind(system,system.entityRemoved));
+		system.view = view;
+		if(system.view.entities.length == 0) this.matchAllEntitiesToView(this.engine.entities,view);
 	}
 	,__class__: glaze_eco_core_ViewManager
 };
@@ -532,6 +562,24 @@ glaze_signals_SignalBase.prototype = {
 	}
 	,__class__: glaze_signals_SignalBase
 };
+var glaze_signals_Signal1 = function() {
+	glaze_signals_SignalBase.call(this);
+};
+glaze_signals_Signal1.__name__ = true;
+glaze_signals_Signal1.__super__ = glaze_signals_SignalBase;
+glaze_signals_Signal1.prototype = $extend(glaze_signals_SignalBase.prototype,{
+	dispatch: function(object1) {
+		this.startDispatch();
+		var node = this.head;
+		while(node != null) {
+			node.listener(object1);
+			if(node.once) this.remove(node.listener);
+			node = node.next;
+		}
+		this.endDispatch();
+	}
+	,__class__: glaze_signals_Signal1
+});
 var glaze_signals_Signal2 = function() {
 	glaze_signals_SignalBase.call(this);
 };
@@ -596,13 +644,28 @@ var test_Test = function() {
 	var system = new test_TestSystem();
 	phase.addSystem(system);
 	var entity = engine.create([new test_TestComponentA("richard"),new test_TestComponentB("jewson")]);
-	var tc2 = entity.map.TestComponentA;
+	var tc2 = (function($this) {
+		var $r;
+		var value = entity.map.TestComponentA;
+		$r = (value instanceof test_TestComponentA)?value:null;
+		return $r;
+	}(this));
 	var tc3 = entity.map.TestComponentA;
 	console.log(Object.prototype.hasOwnProperty.call(entity.map,"TestComponentA"));
 	system.update(0,0);
-	entity.removeComponent(entity.map.TestComponentA);
+	entity.removeComponent((function($this) {
+		var $r;
+		var value1 = entity.map.TestComponentA;
+		$r = (value1 instanceof test_TestComponentA)?value1:null;
+		return $r;
+	}(this)));
 	system.update(0,0);
-	entity.removeComponent(entity.map.TestComponentA);
+	entity.removeComponent((function($this) {
+		var $r;
+		var value2 = entity.map.TestComponentA;
+		$r = (value2 instanceof test_TestComponentA)?value2:null;
+		return $r;
+	}(this)));
 };
 test_Test.__name__ = true;
 test_Test.main = function() {
@@ -628,29 +691,31 @@ test_TestComponentB.prototype = {
 	__class__: test_TestComponentB
 };
 var test_TestSystem = function() {
-	glaze_eco_core_System.call(this);
+	glaze_eco_core_System.call(this,[test_TestComponentA,test_TestComponentB]);
 };
 test_TestSystem.__name__ = true;
 test_TestSystem.__super__ = glaze_eco_core_System;
 test_TestSystem.prototype = $extend(glaze_eco_core_System.prototype,{
-	get_registeredComponents: function() {
-		return [test_TestComponentA,test_TestComponentB];
-	}
-	,entityAdded: function(entity,component) {
+	entityAdded: function(entity,component) {
 		console.log("Added to Test System");
 	}
 	,entityRemoved: function(entity,component) {
 		console.log("Removed from Test System");
 	}
 	,update: function(timestamp,delta) {
-		debugger;
 		var _g = 0;
 		var _g1 = this.view.entities;
 		while(_g < _g1.length) {
 			var entity = _g1[_g];
 			++_g;
-			var tcA = entity.map.TestComponentA;
-			var tcB = entity.map.TestComponentB;
+			var tmp;
+			var value = entity.map.TestComponentA;
+			if((value instanceof test_TestComponentA)) tmp = value; else tmp = null;
+			var tcA = tmp;
+			var tmp1;
+			var value1 = entity.map.TestComponentB;
+			if((value1 instanceof test_TestComponentB)) tmp1 = value1; else tmp1 = null;
+			var tcB = tmp1;
 			console.log("Name=" + tcA.forename + " " + tcB.surname);
 		}
 	}

@@ -10,26 +10,38 @@ class Phase
 
     var engine:Engine;
     var enabled:Bool;
-    var lastTimestamp:Float;
 
-    public function new(engine : Engine) {
+    var msPerUpdate:Float;
+    var accumulator:Float;
+
+    public function new(engine:Engine,msPerUpdate:Float=0) {
         this.engine = engine;
+        this.msPerUpdate = msPerUpdate;
         enabled = true;
-        lastTimestamp = 0;
+        accumulator = 0;
     }
 
-    public function update(timestamp:Float) {
+    public function update(timestamp:Float,delta:Float) {
+
         if (!enabled)
             return;
-        var delta = lastTimestamp == 0 ? DEFAULT_TIME_DELTA : timestamp - lastTimestamp;
-        lastTimestamp = timestamp;
+
+        if (msPerUpdate!=0) {
+            accumulator+=delta;
+            if (accumulator<msPerUpdate)
+                return;
+            accumulator-=msPerUpdate;           
+            delta = msPerUpdate; 
+        }
+
         for (system in systems)
             system.update(timestamp,delta);
+        
     }
 
     public function addSystem(system:System) {
         systems.push(system);
-        system.onAdded(engine);
+        engine.systemAdded.dispatch(system);
     }
 
     public function addSystemAfter(system:System,after:System) {
@@ -37,7 +49,7 @@ class Phase
         if (i<0)
             return false;
         systems.insert(i+1,system);
-        system.onAdded(engine);
+        engine.systemAdded.dispatch(system);
         return true;
     }    
 
@@ -46,7 +58,7 @@ class Phase
         if (i<0)
             return false;
         systems.insert(i,system);
-        system.onAdded(engine);
+        engine.systemAdded.dispatch(system);
         return true;
     }
 

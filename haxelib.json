@@ -1,0 +1,14 @@
+{
+  "name": "glaze-eco",
+  "url": "https://github.com/rjewson/glaze-eco",
+  "license": "MIT",
+  "classPath": "src",
+  "tags": ["entity", "component", "system"],
+  "description": "Entiy component system for the Glaze engine.",
+  "releasenote": "",
+  "version": "0.1.0",
+  "contributors": ["rjewson"],
+  "dependencies": {
+    "glaze-core":""
+  }
+}
