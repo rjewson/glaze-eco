@@ -3,6 +3,7 @@ package test;
 import glaze.ds.DynamicObject;
 import glaze.eco.core.Engine;
 import glaze.eco.core.Entity;
+import glaze.eco.core.System;
 import test.Test;
 import test.TestComponentA;
 import test.TestComponentB;
@@ -40,7 +41,9 @@ class Test
 
         entity.removeComponent(entity.getComponent(TestComponentA));
 
-        //trace(engine);
+        // var sys = engine.getSystem(TestSystem);
+        var sys:test.TestSystem = engine.getSystem(TestSystem);
+        
     }
 
     public static function main() {

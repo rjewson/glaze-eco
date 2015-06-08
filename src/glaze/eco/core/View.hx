@@ -2,7 +2,7 @@ package glaze.eco.core;
 
 import glaze.eco.core.Entity;
 import glaze.eco.core.System;
-import glaze.signals.Signal2;
+import glaze.signals.Signal1;
 
 class View {
 
@@ -10,8 +10,8 @@ class View {
 
     public var registeredComponents:Array<Class<IComponent>> = null;
 
-    public var entityAdded:Signal2<Entity,IComponent> = new Signal2<Entity,IComponent>();
-    public var entityRemoved:Signal2<Entity,IComponent> = new Signal2<Entity,IComponent>();
+    public var entityAdded:Signal1<Entity> = new Signal1<Entity>();
+    public var entityRemoved:Signal1<Entity> = new Signal1<Entity>();
 
     // public var referenceCount:Int = 0;
     // Use the reference count on entityAdded instead...
@@ -20,17 +20,14 @@ class View {
         registeredComponents = components;
     }
 
-    public function addEntity(entity:Entity,component:IComponent) {
-        // #if !macro
-        // js.Lib.debug();
-        // #end
+    public function addEntity(entity:Entity) {
         entities.push(entity);
-        entityAdded.dispatch(entity,component);
+        entityAdded.dispatch(entity);
     }
 
-    public function removeEntity(entity:Entity,component:IComponent) {
+    public function removeEntity(entity:Entity) {
         if (entities.remove(entity))
-            entityRemoved.dispatch(entity,component);
+            entityRemoved.dispatch(entity);
     }
 
 }

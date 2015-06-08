@@ -3,9 +3,17 @@ package glaze.eco.core;
 import glaze.eco.core.Entity;
 import glaze.eco.core.IComponent;
 import glaze.eco.core.Phase;
+import glaze.eco.core.System;
 import glaze.eco.core.ViewManager;
 import glaze.signals.Signal1;
 import glaze.signals.Signal2;
+import haxe.ds.StringMap;
+
+#if macro
+import haxe.macro.Context;
+import haxe.macro.Expr;
+using haxe.macro.ExprTools;
+#end
 
 class Engine 
 {
@@ -14,6 +22,8 @@ class Engine
 
     public var entities:Array<Entity>;
     public var phases:Array<Phase>;
+    public var systems:Array<System>;
+    public var systemMap:StringMap<System>;
 
     public var componentAddedToEntity:Signal2<Entity,IComponent>;
     public var componentRemovedFromEntity:Signal2<Entity,IComponent>;
@@ -23,11 +33,15 @@ class Engine
     public function new() {
         entities = new Array<Entity>(); 
         phases = new Array<Phase>();
+        systems = new Array<System>();
+        systemMap = new StringMap<System>();
 
         componentAddedToEntity = new Signal2<Entity,IComponent>();
         componentRemovedFromEntity = new Signal2<Entity,IComponent>();
 
         systemAdded = new Signal1<System>();
+
+        systemAdded.add(onSystemAdded);
 
         viewManager = new ViewManager(this);
     }
@@ -38,10 +52,19 @@ class Engine
         return entity;
     }
 
-    public function createPhase() {
-        var phase = new Phase(this);
+    public function createPhase(msPerUpdate:Float=0) {
+        var phase = new Phase(this,msPerUpdate);
         phases.push(phase);
         return phase;
+    }
+
+    public function onSystemAdded(system:System) {
+        systems.push(system);
+        systemMap.set(Type.getClassName(Type.getClass(system)),system);
+    }
+
+    public function getSystem(systemClass:Class<System>) {
+        return untyped systemMap.get(Type.getClassName(systemClass));
     }
 
     public function update(timestamp:Float,delta:Float) {

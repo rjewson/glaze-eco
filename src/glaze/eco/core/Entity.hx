@@ -27,7 +27,8 @@ class Entity
     }
 
     public function addComponent(component:IComponent) {
-        var name:Dynamic = Reflect.field( Type.getClass(component) , "NAME");
+        // var name:Dynamic = Reflect.field( Type.getClass(component) , "NAME");
+        var name = GET_NAME_FROM_COMPONENT(component);
         if (exists(name))
             remove(name,component);
         add(name,component);
@@ -40,26 +41,30 @@ class Entity
     }
 
     public function removeComponent(component:IComponent) {
-        var name:Dynamic = Reflect.field( Type.getClass(component) , "NAME");
+        var name = GET_NAME_FROM_COMPONENT(component);
         if (exists(name)) {
             remove(name,component);
             engine.componentRemovedFromEntity.dispatch(this,component);
         }
     }
 
-    // public function removeComponentByClass(componentClass:Class<IComponent>) {
-    //     removeComponent();
-    // }
-
+#if (display)
     macro public function getComponent<A:IComponent>(self:Expr,componentClass:ExprOf<Class<A>>):ExprOf<A> {
-        var name = macro $componentClass.NAME;
-        //return macro cast untyped $self.map[$name];
-        //return macro $self.get($name);
-        return macro Std.instance($self.get($name), $componentClass);
+        return macro Std.instance($self.get($componentClass.NAME), $componentClass);
     }
+#else
+    macro public function getComponent<A:IComponent>(self:Expr,componentClass:ExprOf<Class<A>>):ExprOf<A> {
+        return macro $self._internal_unsafeCast($self.get($componentClass.NAME), $componentClass);
+    }
+#end
 
     macro public function getComponentStr(self:Expr,key:String):ExprOf<IComponent> {
         return macro untyped $self.map.$key;
+    }
+
+    @:extern // Inline even in debug builds
+    inline public function _internal_unsafeCast<A:IComponent>(component:IComponent,componentClass:Class<A>):A {
+        return cast component;
     }
 
     public inline function get(key:String):IComponent {
@@ -78,6 +83,10 @@ class Entity
     public inline function remove(key:String,value:IComponent):Bool {
         list.remove(value);
         return Reflect.deleteField(map, key);
+    }
+
+    public inline static function GET_NAME_FROM_COMPONENT(component:IComponent):String {
+        return Reflect.field( Type.getClass(component) , "NAME");
     }
 
 }

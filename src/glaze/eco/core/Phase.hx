@@ -8,17 +8,20 @@ class Phase
 
     public var systems:Array<System> = new Array<System>();
 
-    var engine:Engine;
-    var enabled:Bool;
+    public var engine:Engine;
+    public var enabled:Bool;
 
     var msPerUpdate:Float;
     var accumulator:Float;
 
-    public function new(engine:Engine,msPerUpdate:Float=0) {
+    var updateCount:Int;
+
+    public function new(engine:Engine,msPerUpdate:Float=0,maxAccumulatedDelta:Float=0) {
         this.engine = engine;
         this.msPerUpdate = msPerUpdate;
         enabled = true;
         accumulator = 0;
+        updateCount = 0;
     }
 
     public function update(timestamp:Float,delta:Float) {
@@ -27,15 +30,24 @@ class Phase
             return;
 
         if (msPerUpdate!=0) {
+            // accumulator+=delta;
+            // if (accumulator<msPerUpdate)
+            //     return;
+            // accumulator-=msPerUpdate;           
+            // delta = msPerUpdate; 
             accumulator+=delta;
-            if (accumulator<msPerUpdate)
-                return;
-            accumulator-=msPerUpdate;           
-            delta = msPerUpdate; 
+            while (accumulator>msPerUpdate) {
+                updateCount++;
+                accumulator-=msPerUpdate;
+                for (system in systems)
+                    system.update(timestamp,msPerUpdate);     
+            }
+
+        } else {
+            for (system in systems)
+                system.update(timestamp,delta);
         }
 
-        for (system in systems)
-            system.update(timestamp,delta);
         
     }
 

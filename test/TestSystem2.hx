@@ -11,11 +11,11 @@ class TestSystem2 extends System {
         super([TestComponentC]);
     }
 
-    override public function entityAdded(entity:Entity,component:IComponent) {
+    override public function entityAdded(entity:Entity) {
         trace("Added to Test System 2");
     }
 
-    override public function entityRemoved(entity:Entity,component:IComponent) {
+    override public function entityRemoved(entity:Entity) {
         trace("Removed from Test System 2");
     }
 

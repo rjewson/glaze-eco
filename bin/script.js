@@ -6,7 +6,7 @@ function $extend(from, fields) {
 	return proto;
 }
 var HxOverrides = function() { };
-HxOverrides.__name__ = true;
+HxOverrides.__name__ = ["HxOverrides"];
 HxOverrides.indexOf = function(a,obj,i) {
 	var len = a.length;
 	if(i < 0) {
@@ -25,9 +25,9 @@ HxOverrides.remove = function(a,obj) {
 	a.splice(i,1);
 	return true;
 };
-Math.__name__ = true;
+Math.__name__ = ["Math"];
 var Reflect = function() { };
-Reflect.__name__ = true;
+Reflect.__name__ = ["Reflect"];
 Reflect.field = function(o,field) {
 	try {
 		return o[field];
@@ -58,8 +58,15 @@ Reflect.deleteField = function(o,field) {
 	delete(o[field]);
 	return true;
 };
+var Type = function() { };
+Type.__name__ = ["Type"];
+Type.getClassName = function(c) {
+	var a = c.__name__;
+	if(a == null) return null;
+	return a.join(".");
+};
 var glaze_ds__$DynamicObject_DynamicObject_$Impl_$ = {};
-glaze_ds__$DynamicObject_DynamicObject_$Impl_$.__name__ = true;
+glaze_ds__$DynamicObject_DynamicObject_$Impl_$.__name__ = ["glaze","ds","_DynamicObject","DynamicObject_Impl_"];
 glaze_ds__$DynamicObject_DynamicObject_$Impl_$._new = function() {
 	return { };
 };
@@ -81,22 +88,41 @@ glaze_ds__$DynamicObject_DynamicObject_$Impl_$.keys = function(this1) {
 var glaze_eco_core_Engine = function() {
 	this.entities = [];
 	this.phases = [];
+	this.systems = [];
+	this.systemMap = new haxe_ds_StringMap();
 	this.componentAddedToEntity = new glaze_signals_Signal2();
 	this.componentRemovedFromEntity = new glaze_signals_Signal2();
 	this.systemAdded = new glaze_signals_Signal1();
+	this.systemAdded.add($bind(this,this.onSystemAdded));
 	this.viewManager = new glaze_eco_core_ViewManager(this);
 };
-glaze_eco_core_Engine.__name__ = true;
+glaze_eco_core_Engine.__name__ = ["glaze","eco","core","Engine"];
 glaze_eco_core_Engine.prototype = {
 	create: function(components) {
 		var entity = new glaze_eco_core_Entity(this,components);
 		this.entities.push(entity);
 		return entity;
 	}
-	,createPhase: function() {
-		var phase = new glaze_eco_core_Phase(this);
+	,createPhase: function(msPerUpdate) {
+		if(msPerUpdate == null) msPerUpdate = 0;
+		var phase = new glaze_eco_core_Phase(this,msPerUpdate);
 		this.phases.push(phase);
 		return phase;
+	}
+	,onSystemAdded: function(system) {
+		this.systems.push(system);
+		var _this = this.systemMap;
+		var key = Type.getClassName(system == null?null:js_Boot.getClass(system));
+		if(__map_reserved[key] != null) _this.setReserved(key,system); else _this.h[key] = system;
+	}
+	,getSystem: function(systemClass) {
+		return (function($this) {
+			var $r;
+			var _this = $this.systemMap;
+			var key = Type.getClassName(systemClass);
+			$r = __map_reserved[key] != null?_this.getReserved(key):_this.h[key];
+			return $r;
+		}(this));
 	}
 	,update: function(timestamp,delta) {
 		var _g = 0;
@@ -116,20 +142,18 @@ var glaze_eco_core_Entity = function(engine,components) {
 	this.engine = engine;
 	if(components != null) this.addManyComponent(components);
 };
-glaze_eco_core_Entity.__name__ = true;
+glaze_eco_core_Entity.__name__ = ["glaze","eco","core","Entity"];
+glaze_eco_core_Entity.GET_NAME_FROM_COMPONENT = function(component) {
+	return Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
+};
 glaze_eco_core_Entity.prototype = {
 	addComponent: function(component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
-		var tmp;
-		var key = name;
-		tmp = Object.prototype.hasOwnProperty.call(this.map,key);
-		if(tmp) {
-			var key1 = name;
+		if(Object.prototype.hasOwnProperty.call(this.map,name)) {
 			HxOverrides.remove(this.list,component);
-			Reflect.deleteField(this.map,key1);
+			Reflect.deleteField(this.map,name);
 		}
-		var key2 = name;
-		this.map[key2] = component;
+		this.map[name] = component;
 		this.list.push(component);
 		this.engine.componentAddedToEntity.dispatch(this,component);
 	}
@@ -143,13 +167,9 @@ glaze_eco_core_Entity.prototype = {
 	}
 	,removeComponent: function(component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
-		var tmp;
-		var key = name;
-		tmp = Object.prototype.hasOwnProperty.call(this.map,key);
-		if(tmp) {
-			var key1 = name;
+		if(Object.prototype.hasOwnProperty.call(this.map,name)) {
 			HxOverrides.remove(this.list,component);
-			Reflect.deleteField(this.map,key1);
+			Reflect.deleteField(this.map,name);
 			this.engine.componentRemovedFromEntity.dispatch(this,component);
 		}
 	}
@@ -170,31 +190,42 @@ glaze_eco_core_Entity.prototype = {
 	,__class__: glaze_eco_core_Entity
 };
 var glaze_eco_core_IComponent = function() { };
-glaze_eco_core_IComponent.__name__ = true;
-var glaze_eco_core_Phase = function(engine,msPerUpdate) {
+glaze_eco_core_IComponent.__name__ = ["glaze","eco","core","IComponent"];
+var glaze_eco_core_Phase = function(engine,msPerUpdate,maxAccumulatedDelta) {
+	if(maxAccumulatedDelta == null) maxAccumulatedDelta = 0;
 	if(msPerUpdate == null) msPerUpdate = 0;
 	this.systems = [];
 	this.engine = engine;
 	this.msPerUpdate = msPerUpdate;
 	this.enabled = true;
 	this.accumulator = 0;
+	this.updateCount = 0;
 };
-glaze_eco_core_Phase.__name__ = true;
+glaze_eco_core_Phase.__name__ = ["glaze","eco","core","Phase"];
 glaze_eco_core_Phase.prototype = {
 	update: function(timestamp,delta) {
 		if(!this.enabled) return;
 		if(this.msPerUpdate != 0) {
 			this.accumulator += delta;
-			if(this.accumulator < this.msPerUpdate) return;
-			this.accumulator -= this.msPerUpdate;
-			delta = this.msPerUpdate;
-		}
-		var _g = 0;
-		var _g1 = this.systems;
-		while(_g < _g1.length) {
-			var system = _g1[_g];
-			++_g;
-			system.update(timestamp,delta);
+			while(this.accumulator > this.msPerUpdate) {
+				this.updateCount++;
+				this.accumulator -= this.msPerUpdate;
+				var _g = 0;
+				var _g1 = this.systems;
+				while(_g < _g1.length) {
+					var system = _g1[_g];
+					++_g;
+					system.update(timestamp,this.msPerUpdate);
+				}
+			}
+		} else {
+			var _g2 = 0;
+			var _g11 = this.systems;
+			while(_g2 < _g11.length) {
+				var system1 = _g11[_g2];
+				++_g2;
+				system1.update(timestamp,delta);
+			}
 		}
 	}
 	,addSystem: function(system) {
@@ -219,37 +250,38 @@ glaze_eco_core_Phase.prototype = {
 };
 var glaze_eco_core_System = function(componentSignature) {
 	this.registeredComponents = componentSignature;
+	this.enabled = true;
 };
-glaze_eco_core_System.__name__ = true;
+glaze_eco_core_System.__name__ = ["glaze","eco","core","System"];
 glaze_eco_core_System.prototype = {
 	onAdded: function(engine) {
 		this.engine = engine;
 	}
 	,onRemoved: function() {
 	}
-	,entityAdded: function(entity,component) {
+	,entityAdded: function(entity) {
 	}
-	,entityRemoved: function(entity,component) {
+	,entityRemoved: function(entity) {
 	}
 	,update: function(timestamp,delta) {
 	}
 	,__class__: glaze_eco_core_System
 };
 var glaze_eco_core_View = function(components) {
-	this.entityRemoved = new glaze_signals_Signal2();
-	this.entityAdded = new glaze_signals_Signal2();
+	this.entityRemoved = new glaze_signals_Signal1();
+	this.entityAdded = new glaze_signals_Signal1();
 	this.registeredComponents = null;
 	this.entities = [];
 	this.registeredComponents = components;
 };
-glaze_eco_core_View.__name__ = true;
+glaze_eco_core_View.__name__ = ["glaze","eco","core","View"];
 glaze_eco_core_View.prototype = {
-	addEntity: function(entity,component) {
+	addEntity: function(entity) {
 		this.entities.push(entity);
-		this.entityAdded.dispatch(entity,component);
+		this.entityAdded.dispatch(entity);
 	}
-	,removeEntity: function(entity,component) {
-		if(HxOverrides.remove(this.entities,entity)) this.entityRemoved.dispatch(entity,component);
+	,removeEntity: function(entity) {
+		if(HxOverrides.remove(this.entities,entity)) this.entityRemoved.dispatch(entity);
 	}
 	,__class__: glaze_eco_core_View
 };
@@ -261,7 +293,7 @@ var glaze_eco_core_ViewManager = function(engine) {
 	engine.componentRemovedFromEntity.add($bind(this,this.unmatchViews));
 	engine.systemAdded.add($bind(this,this.injectView));
 };
-glaze_eco_core_ViewManager.__name__ = true;
+glaze_eco_core_ViewManager.__name__ = ["glaze","eco","core","ViewManager"];
 glaze_eco_core_ViewManager.prototype = {
 	getView: function(components,forceUpdate) {
 		if(forceUpdate == null) forceUpdate = false;
@@ -333,7 +365,7 @@ glaze_eco_core_ViewManager.prototype = {
 			while(_g < views.length) {
 				var view = views[_g];
 				++_g;
-				if(this.entityMatchesView(entity,view.registeredComponents)) view.addEntity(entity,component);
+				if(this.entityMatchesView(entity,view.registeredComponents)) view.addEntity(entity);
 			}
 		}
 	}
@@ -342,7 +374,7 @@ glaze_eco_core_ViewManager.prototype = {
 		while(_g < entities.length) {
 			var entity = entities[_g];
 			++_g;
-			if(this.entityMatchesView(entity,view.registeredComponents)) view.addEntity(entity,null);
+			if(this.entityMatchesView(entity,view.registeredComponents)) view.addEntity(entity);
 		}
 	}
 	,unmatchViews: function(entity,component) {
@@ -356,7 +388,7 @@ glaze_eco_core_ViewManager.prototype = {
 			while(_g < views.length) {
 				var view = views[_g];
 				++_g;
-				view.removeEntity(entity,component);
+				view.removeEntity(entity);
 			}
 		}
 	}
@@ -371,13 +403,13 @@ glaze_eco_core_ViewManager.prototype = {
 };
 var glaze_signals_ListenerNode = function() {
 };
-glaze_signals_ListenerNode.__name__ = true;
+glaze_signals_ListenerNode.__name__ = ["glaze","signals","ListenerNode"];
 glaze_signals_ListenerNode.prototype = {
 	__class__: glaze_signals_ListenerNode
 };
 var glaze_signals_ListenerNodePool = function() {
 };
-glaze_signals_ListenerNodePool.__name__ = true;
+glaze_signals_ListenerNodePool.__name__ = ["glaze","signals","ListenerNodePool"];
 glaze_signals_ListenerNodePool.prototype = {
 	get: function() {
 		if(this.tail != null) {
@@ -414,7 +446,7 @@ var glaze_signals_SignalBase = function() {
 	this.listenerNodePool = new glaze_signals_ListenerNodePool();
 	this.numListeners = 0;
 };
-glaze_signals_SignalBase.__name__ = true;
+glaze_signals_SignalBase.__name__ = ["glaze","signals","SignalBase"];
 glaze_signals_SignalBase.prototype = {
 	startDispatch: function() {
 		this.dispatching = true;
@@ -565,7 +597,7 @@ glaze_signals_SignalBase.prototype = {
 var glaze_signals_Signal1 = function() {
 	glaze_signals_SignalBase.call(this);
 };
-glaze_signals_Signal1.__name__ = true;
+glaze_signals_Signal1.__name__ = ["glaze","signals","Signal1"];
 glaze_signals_Signal1.__super__ = glaze_signals_SignalBase;
 glaze_signals_Signal1.prototype = $extend(glaze_signals_SignalBase.prototype,{
 	dispatch: function(object1) {
@@ -583,7 +615,7 @@ glaze_signals_Signal1.prototype = $extend(glaze_signals_SignalBase.prototype,{
 var glaze_signals_Signal2 = function() {
 	glaze_signals_SignalBase.call(this);
 };
-glaze_signals_Signal2.__name__ = true;
+glaze_signals_Signal2.__name__ = ["glaze","signals","Signal2"];
 glaze_signals_Signal2.__super__ = glaze_signals_SignalBase;
 glaze_signals_Signal2.prototype = $extend(glaze_signals_SignalBase.prototype,{
 	dispatch: function(object1,object2) {
@@ -599,11 +631,11 @@ glaze_signals_Signal2.prototype = $extend(glaze_signals_SignalBase.prototype,{
 	,__class__: glaze_signals_Signal2
 });
 var haxe_IMap = function() { };
-haxe_IMap.__name__ = true;
+haxe_IMap.__name__ = ["haxe","IMap"];
 var haxe_ds_StringMap = function() {
 	this.h = { };
 };
-haxe_ds_StringMap.__name__ = true;
+haxe_ds_StringMap.__name__ = ["haxe","ds","StringMap"];
 haxe_ds_StringMap.__interfaces__ = [haxe_IMap];
 haxe_ds_StringMap.prototype = {
 	setReserved: function(key,value) {
@@ -620,7 +652,7 @@ haxe_ds_StringMap.prototype = {
 	,__class__: haxe_ds_StringMap
 };
 var js_Boot = function() { };
-js_Boot.__name__ = true;
+js_Boot.__name__ = ["js","Boot"];
 js_Boot.getClass = function(o) {
 	if((o instanceof Array) && o.__enum__ == null) return Array; else {
 		var cl = o.__class__;
@@ -666,8 +698,9 @@ var test_Test = function() {
 		$r = (value2 instanceof test_TestComponentA)?value2:null;
 		return $r;
 	}(this)));
+	var sys = engine.getSystem(test_TestSystem);
 };
-test_Test.__name__ = true;
+test_Test.__name__ = ["test","Test"];
 test_Test.main = function() {
 	new test_Test();
 };
@@ -677,7 +710,7 @@ test_Test.prototype = {
 var test_TestComponentA = function(forename) {
 	this.forename = forename;
 };
-test_TestComponentA.__name__ = true;
+test_TestComponentA.__name__ = ["test","TestComponentA"];
 test_TestComponentA.__interfaces__ = [glaze_eco_core_IComponent];
 test_TestComponentA.prototype = {
 	__class__: test_TestComponentA
@@ -685,7 +718,7 @@ test_TestComponentA.prototype = {
 var test_TestComponentB = function(surname) {
 	this.surname = surname;
 };
-test_TestComponentB.__name__ = true;
+test_TestComponentB.__name__ = ["test","TestComponentB"];
 test_TestComponentB.__interfaces__ = [glaze_eco_core_IComponent];
 test_TestComponentB.prototype = {
 	__class__: test_TestComponentB
@@ -693,13 +726,13 @@ test_TestComponentB.prototype = {
 var test_TestSystem = function() {
 	glaze_eco_core_System.call(this,[test_TestComponentA,test_TestComponentB]);
 };
-test_TestSystem.__name__ = true;
+test_TestSystem.__name__ = ["test","TestSystem"];
 test_TestSystem.__super__ = glaze_eco_core_System;
 test_TestSystem.prototype = $extend(glaze_eco_core_System.prototype,{
-	entityAdded: function(entity,component) {
+	entityAdded: function(entity) {
 		console.log("Added to Test System");
 	}
-	,entityRemoved: function(entity,component) {
+	,entityRemoved: function(entity) {
 		console.log("Removed from Test System");
 	}
 	,update: function(timestamp,delta) {
@@ -727,8 +760,8 @@ if(Array.prototype.indexOf) HxOverrides.indexOf = function(a,o,i) {
 	return Array.prototype.indexOf.call(a,o,i);
 };
 String.prototype.__class__ = String;
-String.__name__ = true;
-Array.__name__ = true;
+String.__name__ = ["String"];
+Array.__name__ = ["Array"];
 var __map_reserved = {}
 glaze_eco_core_Phase.DEFAULT_TIME_DELTA = 16.6666666666666679;
 js_Boot.__toStr = {}.toString;

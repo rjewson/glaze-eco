@@ -81,12 +81,13 @@ class ViewManager {
         // #if !macro
         // js.Lib.debug();
         // #end
-        var name = Reflect.field( Type.getClass(component) , "NAME");
+        //var name = Reflect.field( Type.getClass(component) , "NAME");
+        var name = Entity.GET_NAME_FROM_COMPONENT(component);
         var views = componentViewMap.get(name);
         if (views!=null) {
             for (view in views) {
                 if (entityMatchesView(entity,view.registeredComponents))
-                    view.addEntity(entity,component);
+                    view.addEntity(entity);
             }
         }
     }
@@ -94,16 +95,17 @@ class ViewManager {
     public function matchAllEntitiesToView(entities:Array<Entity>,view:View) {
         for (entity in entities) {
             if (entityMatchesView(entity,view.registeredComponents))
-                view.addEntity(entity,null);
+                view.addEntity(entity);
         }
     }
 
     public function unmatchViews(entity:Entity,component:IComponent) {
-        var name = Reflect.field( Type.getClass(component) , "NAME");
+        var name = Entity.GET_NAME_FROM_COMPONENT(component);
+        // var name = Reflect.field( Type.getClass(component) , "NAME");
         var views = componentViewMap.get(name);
         if (views!=null) {
             for (view in views) {
-                view.removeEntity(entity,component);
+                view.removeEntity(entity);
             }
         }
     }

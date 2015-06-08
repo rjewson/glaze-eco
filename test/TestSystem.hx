@@ -7,15 +7,17 @@ import glaze.eco.core.View;
 
 class TestSystem extends System {
 
+    public var textField:String;
+
     public function new() {
         super([TestComponentA,TestComponentB]);
     }
 
-    override public function entityAdded(entity:Entity,component:IComponent) {
+    override public function entityAdded(entity:Entity) {
         trace("Added to Test System");
     }
 
-    override public function entityRemoved(entity:Entity,component:IComponent) {
+    override public function entityRemoved(entity:Entity) {
         trace("Removed from Test System");
     }
 
