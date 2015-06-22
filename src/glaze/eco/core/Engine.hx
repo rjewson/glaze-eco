@@ -30,6 +30,8 @@ class Engine
 
     public var systemAdded:Signal1<System>;
 
+    var idCount:Int;
+
     public function new() {
         entities = new Array<Entity>(); 
         phases = new Array<Phase>();
@@ -44,12 +46,22 @@ class Engine
         systemAdded.add(onSystemAdded);
 
         viewManager = new ViewManager(this);
+
+        idCount = 0;
     }
 
-    public function create(?components:Array<IComponent>) {
+    public function createEntity(?components:Array<IComponent>,?name:String) {
         var entity = new Entity(this, components);
+        if (name!=null)
+            entity.name = name;
+        entity.id = idCount++;
         entities.push(entity);
         return entity;
+    }
+
+    public function destroyEntity(entity:Entity) {
+        entity.removeAllComponents();
+        entities.remove(entity);
     }
 
     public function createPhase(msPerUpdate:Float=0) {

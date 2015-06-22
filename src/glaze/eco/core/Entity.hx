@@ -13,6 +13,7 @@ class Entity
 {
 
     public var id:Int = 0;
+    public var name:String;
 
     public var map:Dynamic<IComponent> = {};
     public var list:Array<IComponent> = [];
@@ -46,6 +47,11 @@ class Entity
             remove(name,component);
             engine.componentRemovedFromEntity.dispatch(this,component);
         }
+    }
+
+    public function removeAllComponents() {
+        for (component in list)
+            removeComponent(component);
     }
 
 #if (display)

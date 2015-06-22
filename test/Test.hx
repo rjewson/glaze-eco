@@ -20,7 +20,7 @@ class Test
         var system = new TestSystem();
         phase.addSystem(system);
 
-        var entity = engine.create([new TestComponentA("richard"),new TestComponentB("jewson")]);
+        var entity = engine.createEntity([new TestComponentA("richard"),new TestComponentB("jewson")]);
 
         // var tc = new TestComponentA();
         // entity.addComponent(tc);
