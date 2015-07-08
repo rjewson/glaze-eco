@@ -95,13 +95,20 @@ var glaze_eco_core_Engine = function() {
 	this.systemAdded = new glaze_signals_Signal1();
 	this.systemAdded.add($bind(this,this.onSystemAdded));
 	this.viewManager = new glaze_eco_core_ViewManager(this);
+	this.idCount = 0;
 };
 glaze_eco_core_Engine.__name__ = ["glaze","eco","core","Engine"];
 glaze_eco_core_Engine.prototype = {
-	create: function(components) {
+	createEntity: function(components,name) {
 		var entity = new glaze_eco_core_Entity(this,components);
+		if(name != null) entity.name = name;
+		entity.id = this.idCount++;
 		this.entities.push(entity);
 		return entity;
+	}
+	,destroyEntity: function(entity) {
+		entity.removeAllComponents();
+		HxOverrides.remove(this.entities,entity);
 	}
 	,createPhase: function(msPerUpdate) {
 		if(msPerUpdate == null) msPerUpdate = 0;
@@ -136,6 +143,7 @@ glaze_eco_core_Engine.prototype = {
 	,__class__: glaze_eco_core_Engine
 };
 var glaze_eco_core_Entity = function(engine,components) {
+	this.referenceCount = 0;
 	this.list = [];
 	this.map = { };
 	this.id = 0;
@@ -167,11 +175,15 @@ glaze_eco_core_Entity.prototype = {
 	}
 	,removeComponent: function(component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
+		console.log("rn=" + name);
 		if(Object.prototype.hasOwnProperty.call(this.map,name)) {
 			HxOverrides.remove(this.list,component);
 			Reflect.deleteField(this.map,name);
 			this.engine.componentRemovedFromEntity.dispatch(this,component);
 		}
+	}
+	,removeAllComponents: function() {
+		while(this.list.length > 0) this.removeComponent(this.list[this.list.length - 1]);
 	}
 	,get: function(key) {
 		return this.map[key];
@@ -278,10 +290,14 @@ glaze_eco_core_View.__name__ = ["glaze","eco","core","View"];
 glaze_eco_core_View.prototype = {
 	addEntity: function(entity) {
 		this.entities.push(entity);
+		entity.referenceCount++;
 		this.entityAdded.dispatch(entity);
 	}
 	,removeEntity: function(entity) {
-		if(HxOverrides.remove(this.entities,entity)) this.entityRemoved.dispatch(entity);
+		if(HxOverrides.remove(this.entities,entity)) {
+			entity.referenceCount--;
+			this.entityRemoved.dispatch(entity);
+		}
 	}
 	,__class__: glaze_eco_core_View
 };
@@ -378,6 +394,8 @@ glaze_eco_core_ViewManager.prototype = {
 		}
 	}
 	,unmatchViews: function(entity,component) {
+		debugger;
+		console.log(component == null?null:js_Boot.getClass(component));
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
 		var tmp;
 		var _this = this.componentViewMap;
@@ -388,6 +406,7 @@ glaze_eco_core_ViewManager.prototype = {
 			while(_g < views.length) {
 				var view = views[_g];
 				++_g;
+				console.log(view == null?null:js_Boot.getClass(view));
 				view.removeEntity(entity);
 			}
 		}
@@ -675,29 +694,14 @@ var test_Test = function() {
 	var phase = engine.createPhase();
 	var system = new test_TestSystem();
 	phase.addSystem(system);
-	var entity = engine.create([new test_TestComponentA("richard"),new test_TestComponentB("jewson")]);
-	var tc2 = (function($this) {
-		var $r;
-		var value = entity.map.TestComponentA;
-		$r = (value instanceof test_TestComponentA)?value:null;
-		return $r;
-	}(this));
+	var entity = engine.createEntity([new test_TestComponentA("richard"),new test_TestComponentB("jewson")]);
+	var tc2 = entity.map.TestComponentA;
 	var tc3 = entity.map.TestComponentA;
 	console.log(Object.prototype.hasOwnProperty.call(entity.map,"TestComponentA"));
 	system.update(0,0);
-	entity.removeComponent((function($this) {
-		var $r;
-		var value1 = entity.map.TestComponentA;
-		$r = (value1 instanceof test_TestComponentA)?value1:null;
-		return $r;
-	}(this)));
+	entity.removeComponent(entity.map.TestComponentA);
 	system.update(0,0);
-	entity.removeComponent((function($this) {
-		var $r;
-		var value2 = entity.map.TestComponentA;
-		$r = (value2 instanceof test_TestComponentA)?value2:null;
-		return $r;
-	}(this)));
+	entity.removeComponent(entity.map.TestComponentA);
 	var sys = engine.getSystem(test_TestSystem);
 };
 test_Test.__name__ = ["test","Test"];
@@ -741,14 +745,8 @@ test_TestSystem.prototype = $extend(glaze_eco_core_System.prototype,{
 		while(_g < _g1.length) {
 			var entity = _g1[_g];
 			++_g;
-			var tmp;
-			var value = entity.map.TestComponentA;
-			if((value instanceof test_TestComponentA)) tmp = value; else tmp = null;
-			var tcA = tmp;
-			var tmp1;
-			var value1 = entity.map.TestComponentB;
-			if((value1 instanceof test_TestComponentB)) tmp1 = value1; else tmp1 = null;
-			var tcB = tmp1;
+			var tcA = entity.map.TestComponentA;
+			var tcB = entity.map.TestComponentB;
 			console.log("Name=" + tcA.forename + " " + tcB.surname);
 		}
 	}

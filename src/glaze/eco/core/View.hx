@@ -13,21 +13,21 @@ class View {
     public var entityAdded:Signal1<Entity> = new Signal1<Entity>();
     public var entityRemoved:Signal1<Entity> = new Signal1<Entity>();
 
-    // public var referenceCount:Int = 0;
-    // Use the reference count on entityAdded instead...
-
     public function new(components:Array<Class<IComponent>>) {
         registeredComponents = components;
     }
 
     public function addEntity(entity:Entity) {
         entities.push(entity);
+        entity.referenceCount++;
         entityAdded.dispatch(entity);
     }
 
     public function removeEntity(entity:Entity) {
-        if (entities.remove(entity))
+        if (entities.remove(entity)) {
+            entity.referenceCount--;
             entityRemoved.dispatch(entity);
+        }
     }
 
 }

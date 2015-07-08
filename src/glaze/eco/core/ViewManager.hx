@@ -100,11 +100,16 @@ class ViewManager {
     }
 
     public function unmatchViews(entity:Entity,component:IComponent) {
+        #if !macro
+        // js.Lib.debug();
+        // trace(Type.getClass(component));
+        #end
         var name = Entity.GET_NAME_FROM_COMPONENT(component);
         // var name = Reflect.field( Type.getClass(component) , "NAME");
         var views = componentViewMap.get(name);
         if (views!=null) {
             for (view in views) {
+                // trace(Type.getClass(view));
                 view.removeEntity(entity);
             }
         }

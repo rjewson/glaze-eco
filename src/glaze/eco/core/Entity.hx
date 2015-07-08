@@ -20,6 +20,8 @@ class Entity
 
     public var engine(default, null) : Engine;
 
+    public var referenceCount:Int = 0;
+
     public function new(engine:Engine,?components:Array<IComponent>) {
         this.engine = engine;
         if (components!=null) {
@@ -44,14 +46,14 @@ class Entity
     public function removeComponent(component:IComponent) {
         var name = GET_NAME_FROM_COMPONENT(component);
         if (exists(name)) {
-            remove(name,component);
             engine.componentRemovedFromEntity.dispatch(this,component);
+            remove(name,component);            
         }
     }
 
     public function removeAllComponents() {
-        for (component in list)
-            removeComponent(component);
+        while (list.length>0)
+            removeComponent(list[list.length-1]);
     }
 
 #if (display)

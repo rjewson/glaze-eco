@@ -1,4 +1,4 @@
-package glaze.eco.core;
+ package glaze.eco.core;
 
 import glaze.eco.core.Entity;
 
