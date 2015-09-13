@@ -18,6 +18,9 @@ class Entity
     public var map:Dynamic<IComponent> = {};
     public var list:Array<IComponent> = [];
 
+    public var parent:Entity;
+    public var children:Array<Entity> = [];
+
     public var engine(default, null) : Engine;
 
     public var referenceCount:Int = 0;
@@ -32,8 +35,10 @@ class Entity
     public function addComponent(component:IComponent) {
         // var name:Dynamic = Reflect.field( Type.getClass(component) , "NAME");
         var name = GET_NAME_FROM_COMPONENT(component);
-        if (exists(name))
+        if (exists(name)) {
+            trace("ADDING EXITING COMPONENT TYPE!");
             remove(name,component);
+        }
         add(name,component);
         engine.componentAddedToEntity.dispatch(this,component);
     }
@@ -48,12 +53,18 @@ class Entity
         if (exists(name)) {
             engine.componentRemovedFromEntity.dispatch(this,component);
             remove(name,component);            
-        }
+        } 
     }
 
     public function removeAllComponents() {
         while (list.length>0)
+            // removeComponent(list[0]);
             removeComponent(list[list.length-1]);
+    }
+
+    public function addChildEntity(child:Entity) {
+        child.parent = this;
+        children.push(child);
     }
 
 #if (display)

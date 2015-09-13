@@ -107,6 +107,14 @@ glaze_eco_core_Engine.prototype = {
 		return entity;
 	}
 	,destroyEntity: function(entity) {
+		var _g = 0;
+		var _g1 = entity.children;
+		while(_g < _g1.length) {
+			var child = _g1[_g];
+			++_g;
+			this.destroyEntity(child);
+			console.log("removed child");
+		}
 		entity.removeAllComponents();
 		HxOverrides.remove(this.entities,entity);
 	}
@@ -144,6 +152,7 @@ glaze_eco_core_Engine.prototype = {
 };
 var glaze_eco_core_Entity = function(engine,components) {
 	this.referenceCount = 0;
+	this.children = [];
 	this.list = [];
 	this.map = { };
 	this.id = 0;
@@ -158,6 +167,7 @@ glaze_eco_core_Entity.prototype = {
 	addComponent: function(component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
 		if(Object.prototype.hasOwnProperty.call(this.map,name)) {
+			console.log("ADDING EXITING COMPONENT TYPE!");
 			HxOverrides.remove(this.list,component);
 			Reflect.deleteField(this.map,name);
 		}
@@ -175,15 +185,18 @@ glaze_eco_core_Entity.prototype = {
 	}
 	,removeComponent: function(component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
-		console.log("rn=" + name);
 		if(Object.prototype.hasOwnProperty.call(this.map,name)) {
+			this.engine.componentRemovedFromEntity.dispatch(this,component);
 			HxOverrides.remove(this.list,component);
 			Reflect.deleteField(this.map,name);
-			this.engine.componentRemovedFromEntity.dispatch(this,component);
 		}
 	}
 	,removeAllComponents: function() {
 		while(this.list.length > 0) this.removeComponent(this.list[this.list.length - 1]);
+	}
+	,addChildEntity: function(child) {
+		child.parent = this;
+		this.children.push(child);
 	}
 	,get: function(key) {
 		return this.map[key];
@@ -394,8 +407,6 @@ glaze_eco_core_ViewManager.prototype = {
 		}
 	}
 	,unmatchViews: function(entity,component) {
-		debugger;
-		console.log(component == null?null:js_Boot.getClass(component));
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
 		var tmp;
 		var _this = this.componentViewMap;
@@ -406,7 +417,6 @@ glaze_eco_core_ViewManager.prototype = {
 			while(_g < views.length) {
 				var view = views[_g];
 				++_g;
-				console.log(view == null?null:js_Boot.getClass(view));
 				view.removeEntity(entity);
 			}
 		}
