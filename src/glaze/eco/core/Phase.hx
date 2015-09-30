@@ -52,6 +52,7 @@ class Phase
     }
 
     public function addSystem(system:System) {
+        system.onAdded(engine);
         systems.push(system);
         engine.systemAdded.dispatch(system);
     }
@@ -60,6 +61,7 @@ class Phase
         var i = systems.indexOf(after);
         if (i<0)
             return false;
+        system.onAdded(engine);
         systems.insert(i+1,system);
         engine.systemAdded.dispatch(system);
         return true;
@@ -69,6 +71,7 @@ class Phase
         var i = systems.indexOf(before);
         if (i<0)
             return false;
+        system.onAdded(engine);
         systems.insert(i,system);
         engine.systemAdded.dispatch(system);
         return true;

@@ -52,6 +52,7 @@ class Engine
 
     public function createEntity(?components:Array<IComponent>,?name:String) {
         var entity = new Entity(this, components);
+        
         if (name!=null)
             entity.name = name;
         entity.id = idCount++;
@@ -60,6 +61,7 @@ class Engine
     }
 
     public function destroyEntity(entity:Entity) {
+
         for (child in entity.children) {
             destroyEntity(child);
             trace("removed child");

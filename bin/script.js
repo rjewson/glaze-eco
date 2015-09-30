@@ -254,12 +254,14 @@ glaze_eco_core_Phase.prototype = {
 		}
 	}
 	,addSystem: function(system) {
+		system.onAdded(this.engine);
 		this.systems.push(system);
 		this.engine.systemAdded.dispatch(system);
 	}
 	,addSystemAfter: function(system,after) {
 		var i = HxOverrides.indexOf(this.systems,after,0);
 		if(i < 0) return false;
+		system.onAdded(this.engine);
 		this.systems.splice(i + 1,0,system);
 		this.engine.systemAdded.dispatch(system);
 		return true;
@@ -267,6 +269,7 @@ glaze_eco_core_Phase.prototype = {
 	,addSystemBefore: function(system,before) {
 		var i = HxOverrides.indexOf(this.systems,before,0);
 		if(i < 0) return false;
+		system.onAdded(this.engine);
 		this.systems.splice(i,0,system);
 		this.engine.systemAdded.dispatch(system);
 		return true;
