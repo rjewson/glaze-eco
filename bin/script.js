@@ -32,6 +32,7 @@ Reflect.field = function(o,field) {
 	try {
 		return o[field];
 	} catch( e ) {
+		if (e instanceof js__$Boot_HaxeError) e = e.val;
 		return null;
 	}
 };
@@ -153,7 +154,6 @@ glaze_eco_core_Engine.prototype = {
 var glaze_eco_core_Entity = function(engine,components) {
 	this.referenceCount = 0;
 	this.children = [];
-	this.list = [];
 	this.map = { };
 	this.id = 0;
 	this.engine = engine;
@@ -166,13 +166,8 @@ glaze_eco_core_Entity.GET_NAME_FROM_COMPONENT = function(component) {
 glaze_eco_core_Entity.prototype = {
 	addComponent: function(component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
-		if(Object.prototype.hasOwnProperty.call(this.map,name)) {
-			console.log("ADDING EXITING COMPONENT TYPE!");
-			HxOverrides.remove(this.list,component);
-			Reflect.deleteField(this.map,name);
-		}
+		if(Object.prototype.hasOwnProperty.call(this.map,name)) throw new js__$Boot_HaxeError("ADDING EXITING COMPONENT TYPE!");
 		this.map[name] = component;
-		this.list.push(component);
 		this.engine.componentAddedToEntity.dispatch(this,component);
 	}
 	,addManyComponent: function(components) {
@@ -187,12 +182,18 @@ glaze_eco_core_Entity.prototype = {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
 		if(Object.prototype.hasOwnProperty.call(this.map,name)) {
 			this.engine.componentRemovedFromEntity.dispatch(this,component);
-			HxOverrides.remove(this.list,component);
 			Reflect.deleteField(this.map,name);
 		}
 	}
 	,removeAllComponents: function() {
-		while(this.list.length > 0) this.removeComponent(this.list[this.list.length - 1]);
+		var _g = 0;
+		var _g1 = Reflect.fields(this.map);
+		while(_g < _g1.length) {
+			var n = _g1[_g];
+			++_g;
+			this.engine.componentRemovedFromEntity.dispatch(this,Reflect.field(this.map,n));
+			Reflect.deleteField(this.map,this.name);
+		}
 	}
 	,addChildEntity: function(child) {
 		child.parent = this;
@@ -201,16 +202,8 @@ glaze_eco_core_Entity.prototype = {
 	,get: function(key) {
 		return this.map[key];
 	}
-	,add: function(key,value) {
-		this.map[key] = value;
-		this.list.push(value);
-	}
 	,exists: function(key) {
 		return Object.prototype.hasOwnProperty.call(this.map,key);
-	}
-	,remove: function(key,value) {
-		HxOverrides.remove(this.list,value);
-		return Reflect.deleteField(this.map,key);
 	}
 	,__class__: glaze_eco_core_Entity
 };
@@ -683,6 +676,17 @@ haxe_ds_StringMap.prototype = {
 	}
 	,__class__: haxe_ds_StringMap
 };
+var js__$Boot_HaxeError = function(val) {
+	Error.call(this);
+	this.val = val;
+	this.message = String(val);
+	if(Error.captureStackTrace) Error.captureStackTrace(this,js__$Boot_HaxeError);
+};
+js__$Boot_HaxeError.__name__ = ["js","_Boot","HaxeError"];
+js__$Boot_HaxeError.__super__ = Error;
+js__$Boot_HaxeError.prototype = $extend(Error.prototype,{
+	__class__: js__$Boot_HaxeError
+});
 var js_Boot = function() { };
 js_Boot.__name__ = ["js","Boot"];
 js_Boot.getClass = function(o) {

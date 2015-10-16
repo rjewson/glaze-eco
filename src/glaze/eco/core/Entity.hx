@@ -16,7 +16,6 @@ class Entity
     public var name:String;
 
     public var map:Dynamic<IComponent> = {};
-    public var list:Array<IComponent> = [];
 
     public var parent:Entity;
     public var children:Array<Entity> = [];
@@ -36,10 +35,9 @@ class Entity
         // var name:Dynamic = Reflect.field( Type.getClass(component) , "NAME");
         var name = GET_NAME_FROM_COMPONENT(component);
         if (exists(name)) {
-            trace("ADDING EXITING COMPONENT TYPE!");
-            remove(name,component);
+            throw "ADDING EXITING COMPONENT TYPE!";
         }
-        add(name,component);
+        Reflect.setField(map, name, component);
         engine.componentAddedToEntity.dispatch(this,component);
     }
 
@@ -52,14 +50,15 @@ class Entity
         var name = GET_NAME_FROM_COMPONENT(component);
         if (exists(name)) {
             engine.componentRemovedFromEntity.dispatch(this,component);
-            remove(name,component);            
+            Reflect.deleteField(map, name);
         } 
     }
 
     public function removeAllComponents() {
-        while (list.length>0)
-            // removeComponent(list[0]);
-            removeComponent(list[list.length-1]);
+        for (n in Reflect.fields(map)) {
+            engine.componentRemovedFromEntity.dispatch(this,Reflect.field(map,n));
+            Reflect.deleteField(map, name);
+        }
     }
 
     public function addChildEntity(child:Entity) {
@@ -90,18 +89,12 @@ class Entity
         return untyped map[key];
     }
 
-    public inline function add(key:String, value:IComponent):Void {
-        Reflect.setField(map, key, value);
-        list.push(value);
+    macro public function removeComponent2<A:IComponent>(self:Expr,componentClass:ExprOf<Class<A>>):ExprOf<A> {
+        return macro Reflect.deleteField($self.map,$componentClass.NAME);
     }
 
     public inline function exists(key:String):Bool {
         return Reflect.hasField(map, key);
-    }
-
-    public inline function remove(key:String,value:IComponent):Bool {
-        list.remove(value);
-        return Reflect.deleteField(map, key);
     }
 
     public inline static function GET_NAME_FROM_COMPONENT(component:IComponent):String {
