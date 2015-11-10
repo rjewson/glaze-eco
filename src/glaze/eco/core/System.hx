@@ -9,10 +9,12 @@ class System {
 
     public var engine:Engine;
     public var enabled:Bool;
+    public var hasUpdate:Bool;
 
     public function new(componentSignature:Array<Class<IComponent>>) {
         this.registeredComponents = componentSignature;
         enabled = true;
+        hasUpdate = true;
     }
 
     public function onAdded(engine:Engine) {
@@ -29,6 +31,10 @@ class System {
     }
 
     public function update(timestamp:Float,delta:Float) {
+    }
+
+    inline public function canUpdate() {
+        return enabled == hasUpdate == true;
     }
 
 }

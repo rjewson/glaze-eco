@@ -30,25 +30,19 @@ class Phase
             return;
 
         if (msPerUpdate!=0) {
-            // accumulator+=delta;
-            // if (accumulator<msPerUpdate)
-            //     return;
-            // accumulator-=msPerUpdate;           
-            // delta = msPerUpdate; 
             accumulator+=delta;
             while (accumulator>msPerUpdate) {
                 updateCount++;
                 accumulator-=msPerUpdate;
                 for (system in systems)
-                    system.update(timestamp,msPerUpdate);     
+                    if (system.canUpdate())
+                        system.update(timestamp,msPerUpdate);     
             }
-
         } else {
             for (system in systems)
-                system.update(timestamp,delta);
+                if (system.canUpdate())
+                    system.update(timestamp,delta);
         }
-
-        
     }
 
     public function addSystem(system:System) {
