@@ -61,12 +61,6 @@ class Engine
     }
 
     public function destroyEntity(entity:Entity) {
-
-        for (child in entity.children) {
-            destroyEntity(child);
-            trace("removed child");
-        }
-        entity.removeAllComponents();
         entities.remove(entity);
     }
 

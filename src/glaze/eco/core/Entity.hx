@@ -2,6 +2,7 @@ package glaze.eco.core;
 
 import glaze.eco.core.Engine;
 import glaze.eco.core.IComponent;
+import glaze.signals.Signal3;
 
 #if macro
 import haxe.macro.Context;
@@ -12,6 +13,8 @@ using haxe.macro.ExprTools;
 class Entity 
 {
 
+    public static inline var DESTROY:String = "destroy";
+
     public var id:Int = 0;
     public var name:String;
 
@@ -21,6 +24,7 @@ class Entity
     public var children:Array<Entity> = [];
 
     public var engine(default, null) : Engine;
+    public var messages:Signal3<Entity,String,Dynamic> = new Signal3<Entity,String,Dynamic>();
 
     public var referenceCount:Int = 0;
 
@@ -34,7 +38,8 @@ class Entity
     public function addComponent(component:IComponent) {
         // var name:Dynamic = Reflect.field( Type.getClass(component) , "NAME");
         var name = GET_NAME_FROM_COMPONENT(component);
-        if (exists(name)) {
+        if (map.name!=null) {
+        // if (exists(name)) {
             throw "ADDING EXITING COMPONENT TYPE!";
         }
         Reflect.setField(map, name, component);
@@ -48,16 +53,19 @@ class Entity
 
     public function removeComponent(component:IComponent) {
         var name = GET_NAME_FROM_COMPONENT(component);
-        if (exists(name)) {
+        if (map.name!=null) {
+        // if (exists(name)) {
             engine.componentRemovedFromEntity.dispatch(this,component);
-            Reflect.deleteField(map, name);
+            // Reflect.deleteField(map, name);
+            Reflect.setField(map, name, null);
         } 
     }
 
     public function removeAllComponents() {
         for (n in Reflect.fields(map)) {
             engine.componentRemovedFromEntity.dispatch(this,Reflect.field(map,n));
-            Reflect.deleteField(map, name);
+            // Reflect.deleteField(map, name);
+            Reflect.setField(map, name, null);
         }
     }
 
@@ -99,6 +107,20 @@ class Entity
 
     public inline static function GET_NAME_FROM_COMPONENT(component:IComponent):String {
         return Reflect.field( Type.getClass(component) , "NAME");
+    }    
+
+    public inline static function GET_ID_FROM_COMPONENT(component:IComponent):Int {
+        return Reflect.field( Type.getClass(component) , "ID");
+    }
+
+    public function destroy() {
+        for (child in children) {
+            child.destroy();
+        }
+        messages.dispatch(this,Entity.DESTROY,null);
+        messages.removeAll();
+        removeAllComponents();
+        engine.destroyEntity(this);
     }
 
 }

@@ -12,12 +12,14 @@ class BuildComponent {
         return fields;
     }
 
+    static var NEXT_ID:Int = 0;
+
     static function injetName(fields : Array<Field>) {
         var pos = Context.currentPos();
         var cl = Context.getLocalClass().get();
         var name = Context.makeExpr(cl.name, pos);
 
-        var newField = {
+        var componentNameField = {
             name: 'NAME',
             doc: null,
             meta: [],
@@ -26,7 +28,21 @@ class BuildComponent {
             pos: pos//Context.currentPos()
         };
 
-        fields.push(newField);        
+        fields.push(componentNameField);
+
+        var id = Context.makeExpr(NEXT_ID++, pos);
+
+        var componentIDField = {
+            name: 'ID',
+            doc: null,
+            meta: [],
+            access: [AStatic, APublic, AInline],
+            kind: FVar(macro : Int, macro $id),
+            pos: pos//Context.currentPos()
+        };
+
+        fields.push(componentIDField);
+
     }
 
     static function injectConstructor(fields : Array<Field>) {

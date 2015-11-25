@@ -108,15 +108,6 @@ glaze_eco_core_Engine.prototype = {
 		return entity;
 	}
 	,destroyEntity: function(entity) {
-		var _g = 0;
-		var _g1 = entity.children;
-		while(_g < _g1.length) {
-			var child = _g1[_g];
-			++_g;
-			this.destroyEntity(child);
-			console.log("removed child");
-		}
-		entity.removeAllComponents();
 		HxOverrides.remove(this.entities,entity);
 	}
 	,createPhase: function(msPerUpdate) {
@@ -153,6 +144,7 @@ glaze_eco_core_Engine.prototype = {
 };
 var glaze_eco_core_Entity = function(engine,components) {
 	this.referenceCount = 0;
+	this.messages = new glaze_signals_Signal3();
 	this.children = [];
 	this.map = { };
 	this.id = 0;
@@ -163,10 +155,13 @@ glaze_eco_core_Entity.__name__ = ["glaze","eco","core","Entity"];
 glaze_eco_core_Entity.GET_NAME_FROM_COMPONENT = function(component) {
 	return Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
 };
+glaze_eco_core_Entity.GET_ID_FROM_COMPONENT = function(component) {
+	return Reflect.field(component == null?null:js_Boot.getClass(component),"ID");
+};
 glaze_eco_core_Entity.prototype = {
 	addComponent: function(component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
-		if(Object.prototype.hasOwnProperty.call(this.map,name)) throw new js__$Boot_HaxeError("ADDING EXITING COMPONENT TYPE!");
+		if(this.map.name != null) throw new js__$Boot_HaxeError("ADDING EXITING COMPONENT TYPE!");
 		this.map[name] = component;
 		this.engine.componentAddedToEntity.dispatch(this,component);
 	}
@@ -180,9 +175,9 @@ glaze_eco_core_Entity.prototype = {
 	}
 	,removeComponent: function(component) {
 		var name = Reflect.field(component == null?null:js_Boot.getClass(component),"NAME");
-		if(Object.prototype.hasOwnProperty.call(this.map,name)) {
+		if(this.map.name != null) {
 			this.engine.componentRemovedFromEntity.dispatch(this,component);
-			Reflect.deleteField(this.map,name);
+			this.map[name] = null;
 		}
 	}
 	,removeAllComponents: function() {
@@ -192,7 +187,7 @@ glaze_eco_core_Entity.prototype = {
 			var n = _g1[_g];
 			++_g;
 			this.engine.componentRemovedFromEntity.dispatch(this,Reflect.field(this.map,n));
-			Reflect.deleteField(this.map,this.name);
+			this.map[this.name] = null;
 		}
 	}
 	,addChildEntity: function(child) {
@@ -204,6 +199,19 @@ glaze_eco_core_Entity.prototype = {
 	}
 	,exists: function(key) {
 		return Object.prototype.hasOwnProperty.call(this.map,key);
+	}
+	,destroy: function() {
+		var _g = 0;
+		var _g1 = this.children;
+		while(_g < _g1.length) {
+			var child = _g1[_g];
+			++_g;
+			child.destroy();
+		}
+		this.messages.dispatch(this,"destroy",null);
+		this.messages.removeAll();
+		this.removeAllComponents();
+		this.engine.destroyEntity(this);
 	}
 	,__class__: glaze_eco_core_Entity
 };
@@ -233,7 +241,7 @@ glaze_eco_core_Phase.prototype = {
 				while(_g < _g1.length) {
 					var system = _g1[_g];
 					++_g;
-					system.update(timestamp,this.msPerUpdate);
+					if(system.enabled == system.hasUpdate == true) system.update(timestamp,this.msPerUpdate);
 				}
 			}
 		} else {
@@ -242,7 +250,7 @@ glaze_eco_core_Phase.prototype = {
 			while(_g2 < _g11.length) {
 				var system1 = _g11[_g2];
 				++_g2;
-				system1.update(timestamp,delta);
+				if(system1.enabled == system1.hasUpdate == true) system1.update(timestamp,delta);
 			}
 		}
 	}
@@ -272,6 +280,7 @@ glaze_eco_core_Phase.prototype = {
 var glaze_eco_core_System = function(componentSignature) {
 	this.registeredComponents = componentSignature;
 	this.enabled = true;
+	this.hasUpdate = true;
 };
 glaze_eco_core_System.__name__ = ["glaze","eco","core","System"];
 glaze_eco_core_System.prototype = {
@@ -285,6 +294,9 @@ glaze_eco_core_System.prototype = {
 	,entityRemoved: function(entity) {
 	}
 	,update: function(timestamp,delta) {
+	}
+	,canUpdate: function() {
+		return this.enabled == this.hasUpdate == true;
 	}
 	,__class__: glaze_eco_core_System
 };
@@ -655,6 +667,24 @@ glaze_signals_Signal2.prototype = $extend(glaze_signals_SignalBase.prototype,{
 	}
 	,__class__: glaze_signals_Signal2
 });
+var glaze_signals_Signal3 = function() {
+	glaze_signals_SignalBase.call(this);
+};
+glaze_signals_Signal3.__name__ = ["glaze","signals","Signal3"];
+glaze_signals_Signal3.__super__ = glaze_signals_SignalBase;
+glaze_signals_Signal3.prototype = $extend(glaze_signals_SignalBase.prototype,{
+	dispatch: function(object1,object2,object3) {
+		this.startDispatch();
+		var node = this.head;
+		while(node != null) {
+			node.listener(object1,object2,object3);
+			if(node.once) this.remove(node.listener);
+			node = node.next;
+		}
+		this.endDispatch();
+	}
+	,__class__: glaze_signals_Signal3
+});
 var haxe_IMap = function() { };
 haxe_IMap.__name__ = ["haxe","IMap"];
 var haxe_ds_StringMap = function() {
@@ -778,9 +808,12 @@ String.prototype.__class__ = String;
 String.__name__ = ["String"];
 Array.__name__ = ["Array"];
 var __map_reserved = {}
+glaze_eco_core_Entity.DESTROY = "destroy";
 glaze_eco_core_Phase.DEFAULT_TIME_DELTA = 16.6666666666666679;
 js_Boot.__toStr = {}.toString;
 test_TestComponentA.NAME = "TestComponentA";
+test_TestComponentA.ID = 1;
 test_TestComponentB.NAME = "TestComponentB";
+test_TestComponentB.ID = 0;
 test_Test.main();
 })(typeof console != "undefined" ? console : {log:function(){}});
