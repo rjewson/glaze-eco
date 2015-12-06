@@ -53,8 +53,8 @@ class Entity
 
     public function removeComponent(component:IComponent) {
         var name = GET_NAME_FROM_COMPONENT(component);
-        if (map.name!=null) {
-        // if (exists(name)) {
+        // if (map.name!=null) {
+        if (exists(name)) {
             engine.componentRemovedFromEntity.dispatch(this,component);
             // Reflect.deleteField(map, name);
             Reflect.setField(map, name, null);
@@ -102,7 +102,8 @@ class Entity
     }
 
     public inline function exists(key:String):Bool {
-        return Reflect.hasField(map, key);
+        // return Reflect.hasField(map, key);
+        return untyped map[key]!=null;
     }
 
     public inline static function GET_NAME_FROM_COMPONENT(component:IComponent):String {

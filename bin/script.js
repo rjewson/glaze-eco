@@ -198,7 +198,7 @@ glaze_eco_core_Entity.prototype = {
 		return this.map[key];
 	}
 	,exists: function(key) {
-		return Object.prototype.hasOwnProperty.call(this.map,key);
+		return this.map[key] != null;
 	}
 	,destroy: function() {
 		var _g = 0;
@@ -384,7 +384,7 @@ glaze_eco_core_ViewManager.prototype = {
 			++_g;
 			var tmp;
 			var key = Reflect.field(componentClass,"NAME");
-			tmp = Object.prototype.hasOwnProperty.call(entity.map,key);
+			tmp = entity.map[key] != null;
 			if(tmp) {
 				if(--count == 0) return true;
 			}
@@ -744,7 +744,7 @@ var test_Test = function() {
 	var entity = engine.createEntity([new test_TestComponentA("richard"),new test_TestComponentB("jewson")]);
 	var tc2 = entity.map.TestComponentA;
 	var tc3 = entity.map.TestComponentA;
-	console.log(Object.prototype.hasOwnProperty.call(entity.map,"TestComponentA"));
+	console.log(entity.map.TestComponentA != null);
 	system.update(0,0);
 	entity.removeComponent(entity.map.TestComponentA);
 	system.update(0,0);
