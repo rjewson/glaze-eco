@@ -30,6 +30,10 @@ class Engine
 
     public var systemAdded:Signal1<System>;
 
+    public var timestamp:Float;
+
+    public var config:Dynamic;
+
     var idCount:Int;
 
     public function new() {
@@ -48,6 +52,8 @@ class Engine
         viewManager = new ViewManager(this);
 
         idCount = 0;
+
+        config = {};
     }
 
     public function createEntity(?components:Array<IComponent>,?name:String) {
@@ -80,6 +86,7 @@ class Engine
     }
 
     public function update(timestamp:Float,delta:Float) {
+        this.timestamp = timestamp;
         for (phase in phases)
             phase.update(timestamp,delta);
     }

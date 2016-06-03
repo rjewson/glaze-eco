@@ -88,6 +88,11 @@ class Entity
         return macro untyped $self.map.$key;
     }
 
+    // static macro public function gv(self:Expr,key:String):ExprOf<IComponent> {
+    //     return macro var x = untyped $self.map.$key;
+    // }
+
+
     @:extern // Inline even in debug builds
     inline public function _internal_unsafeCast<A:IComponent>(component:IComponent,componentClass:Class<A>):A {
         return cast component;

@@ -56,7 +56,7 @@ class BuildComponent {
     }
 
     public static function getVarAsFunctionArgs(fields : Array<Field>) : Array<FunctionArg> {
-        return fields
+        return cast fields
           .map(function(field) return switch field.kind {
             case FVar(t, _) if(!isStatic(field)):
               { name : field.name, type : t, opt : null, value : null }
