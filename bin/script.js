@@ -111,10 +111,7 @@ var glaze_eco_core_Engine = function() {
 glaze_eco_core_Engine.__name__ = ["glaze","eco","core","Engine"];
 glaze_eco_core_Engine.prototype = {
 	createEntity: function(components,name) {
-		var entity = new glaze_eco_core_Entity(this,components);
-		if(name != null) {
-			entity.name = name;
-		}
+		var entity = new glaze_eco_core_Entity(this,components,name);
 		entity.id = this.idCount++;
 		this.entities.push(entity);
 		return entity;
@@ -161,13 +158,14 @@ glaze_eco_core_Engine.prototype = {
 	}
 	,__class__: glaze_eco_core_Engine
 };
-var glaze_eco_core_Entity = function(engine,components) {
+var glaze_eco_core_Entity = function(engine,components,name) {
 	this.referenceCount = 0;
 	this.messages = new glaze_signals_Signal3();
 	this.children = [];
 	this.map = { };
 	this.id = 0;
 	this.engine = engine;
+	this.name = name;
 	if(components != null) {
 		this.addManyComponent(components);
 	}

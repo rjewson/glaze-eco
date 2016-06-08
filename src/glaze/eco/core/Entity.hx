@@ -28,8 +28,9 @@ class Entity
 
     public var referenceCount:Int = 0;
 
-    public function new(engine:Engine,?components:Array<IComponent>) {
+    public function new(engine:Engine,?components:Array<IComponent>,name:String=null) {
         this.engine = engine;
+        this.name = name;
         if (components!=null) {
             addManyComponent(components);
         }
