@@ -10,6 +10,13 @@ import haxe.macro.Expr;
 using haxe.macro.ExprTools;
 #end
 
+enum ENTITY_LIFECYCLE {
+    INVALID;
+    RUNNING;
+    STOPPING;
+    STOPPED;
+}
+
 class Entity 
 {
 
@@ -23,11 +30,11 @@ class Entity
     public var parent:Entity;
     public var children:Array<Entity> = [];
 
-    public var engine(default, null) : Engine;
+    public var engine:Engine;
     public var messages:Signal3<Entity,String,Dynamic> = new Signal3<Entity,String,Dynamic>();
 
     public var referenceCount:Int = 0;
-
+ 
     public function new(engine:Engine,?components:Array<IComponent>,name:String=null) {
         this.engine = engine;
         this.name = name;
@@ -63,6 +70,10 @@ class Entity
     }
 
     public function removeAllComponents() {
+        trace("remove "+name);
+        // #if !macro
+        // js.Lib.debug();
+        // #end
         for (n in Reflect.fields(map)) {
             engine.componentRemovedFromEntity.dispatch(this,Reflect.field(map,n));
             // Reflect.deleteField(map, name);
@@ -128,6 +139,10 @@ class Entity
         messages.removeAll();
         removeAllComponents();
         engine.destroyEntity(this);
+    }
+
+    public function isActive():Bool {
+        return engine!=null;
     }
 
 }

@@ -21,6 +21,7 @@ class Engine
     public var viewManager:ViewManager;
 
     public var entities:Array<Entity>;
+    public var entityMap:StringMap<Entity>;
     public var phases:Array<Phase>;
     public var systems:Array<System>;
     public var systemMap:StringMap<System>;
@@ -38,6 +39,7 @@ class Engine
 
     public function new() {
         entities = new Array<Entity>(); 
+        entityMap = new StringMap<Entity>();
         phases = new Array<Phase>();
         systems = new Array<System>();
         systemMap = new StringMap<System>();
@@ -56,15 +58,21 @@ class Engine
         config = {};
     }
 
-    public function createEntity(?components:Array<IComponent>,?name:String) {
+    public function createEntity(?components:Array<IComponent>,?name:String):Entity {
         var entity = new Entity(this, components,name);
         entity.id = idCount++;
         entities.push(entity);
         return entity;
     }
 
+    public function createEntityReference(entity:Entity):Void->Entity {
+        entityMap.set(Std.string(entity.id),entity);
+        return entityMap.get.bind(Std.string(entity.id));
+    }
+
     public function destroyEntity(entity:Entity) {
         entities.remove(entity);
+        entityMap.remove(Std.string(entity.id));
     }
 
     public function createPhase(msPerUpdate:Float=0) {

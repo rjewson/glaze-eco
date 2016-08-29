@@ -97,6 +97,7 @@ glaze_ds__$DynamicObject_DynamicObject_$Impl_$.keys = function(this1) {
 };
 var glaze_eco_core_Engine = function() {
 	this.entities = [];
+	this.entityMap = new haxe_ds_StringMap();
 	this.phases = [];
 	this.systems = [];
 	this.systemMap = new haxe_ds_StringMap();
@@ -116,8 +117,23 @@ glaze_eco_core_Engine.prototype = {
 		this.entities.push(entity);
 		return entity;
 	}
+	,createEntityReference: function(entity) {
+		var _this = this.entityMap;
+		var key = entity.id == null?"null":"" + entity.id;
+		if(__map_reserved[key] != null) {
+			_this.setReserved(key,entity);
+		} else {
+			_this.h[key] = entity;
+		}
+		var f = ($_=this.entityMap,$bind($_,$_.get));
+		var a1 = entity.id == null?"null":"" + entity.id;
+		return function() {
+			return f(a1);
+		};
+	}
 	,destroyEntity: function(entity) {
 		HxOverrides.remove(this.entities,entity);
+		this.entityMap.remove(entity.id == null?"null":"" + entity.id);
 	}
 	,createPhase: function(msPerUpdate) {
 		if(msPerUpdate == null) {
@@ -158,6 +174,15 @@ glaze_eco_core_Engine.prototype = {
 	}
 	,__class__: glaze_eco_core_Engine
 };
+var glaze_eco_core_ENTITY_$LIFECYCLE = { __ename__ : true, __constructs__ : ["INVALID","RUNNING","STOPPING","STOPPED"] };
+glaze_eco_core_ENTITY_$LIFECYCLE.INVALID = ["INVALID",0];
+glaze_eco_core_ENTITY_$LIFECYCLE.INVALID.__enum__ = glaze_eco_core_ENTITY_$LIFECYCLE;
+glaze_eco_core_ENTITY_$LIFECYCLE.RUNNING = ["RUNNING",1];
+glaze_eco_core_ENTITY_$LIFECYCLE.RUNNING.__enum__ = glaze_eco_core_ENTITY_$LIFECYCLE;
+glaze_eco_core_ENTITY_$LIFECYCLE.STOPPING = ["STOPPING",2];
+glaze_eco_core_ENTITY_$LIFECYCLE.STOPPING.__enum__ = glaze_eco_core_ENTITY_$LIFECYCLE;
+glaze_eco_core_ENTITY_$LIFECYCLE.STOPPED = ["STOPPED",3];
+glaze_eco_core_ENTITY_$LIFECYCLE.STOPPED.__enum__ = glaze_eco_core_ENTITY_$LIFECYCLE;
 var glaze_eco_core_Entity = function(engine,components,name) {
 	this.referenceCount = 0;
 	this.messages = new glaze_signals_Signal3();
@@ -202,6 +227,7 @@ glaze_eco_core_Entity.prototype = {
 		}
 	}
 	,removeAllComponents: function() {
+		console.log("remove " + this.name);
 		var _g = 0;
 		var _g1 = Reflect.fields(this.map);
 		while(_g < _g1.length) {
@@ -233,6 +259,9 @@ glaze_eco_core_Entity.prototype = {
 		this.messages.removeAll();
 		this.removeAllComponents();
 		this.engine.destroyEntity(this);
+	}
+	,isActive: function() {
+		return this.engine != null;
 	}
 	,__class__: glaze_eco_core_Entity
 };
@@ -783,7 +812,13 @@ var haxe_ds_StringMap = function() {
 haxe_ds_StringMap.__name__ = ["haxe","ds","StringMap"];
 haxe_ds_StringMap.__interfaces__ = [haxe_IMap];
 haxe_ds_StringMap.prototype = {
-	setReserved: function(key,value) {
+	get: function(key) {
+		if(__map_reserved[key] != null) {
+			return this.getReserved(key);
+		}
+		return this.h[key];
+	}
+	,setReserved: function(key,value) {
 		if(this.rh == null) {
 			this.rh = { };
 		}
@@ -801,6 +836,22 @@ haxe_ds_StringMap.prototype = {
 			return false;
 		}
 		return this.rh.hasOwnProperty("$" + key);
+	}
+	,remove: function(key) {
+		if(__map_reserved[key] != null) {
+			key = "$" + key;
+			if(this.rh == null || !this.rh.hasOwnProperty(key)) {
+				return false;
+			}
+			delete(this.rh[key]);
+			return true;
+		} else {
+			if(!this.h.hasOwnProperty(key)) {
+				return false;
+			}
+			delete(this.h[key]);
+			return true;
+		}
 	}
 	,__class__: haxe_ds_StringMap
 };
@@ -839,6 +890,90 @@ js_Boot.getClass = function(o) {
 			return js_Boot.__resolveNativeClass(name);
 		}
 		return null;
+	}
+};
+js_Boot.__string_rec = function(o,s) {
+	if(o == null) {
+		return "null";
+	}
+	if(s.length >= 5) {
+		return "<...>";
+	}
+	var t = typeof(o);
+	if(t == "function" && (o.__name__ || o.__ename__)) {
+		t = "object";
+	}
+	switch(t) {
+	case "function":
+		return "<function>";
+	case "object":
+		if(o instanceof Array) {
+			if(o.__enum__) {
+				if(o.length == 2) {
+					return o[0];
+				}
+				var str = o[0] + "(";
+				s += "\t";
+				var _g1 = 2;
+				var _g = o.length;
+				while(_g1 < _g) {
+					var i = _g1++;
+					if(i != 2) {
+						str += "," + js_Boot.__string_rec(o[i],s);
+					} else {
+						str += js_Boot.__string_rec(o[i],s);
+					}
+				}
+				return str + ")";
+			}
+			var l = o.length;
+			var i1;
+			var str1 = "[";
+			s += "\t";
+			var _g11 = 0;
+			var _g2 = l;
+			while(_g11 < _g2) {
+				var i2 = _g11++;
+				str1 += (i2 > 0?",":"") + js_Boot.__string_rec(o[i2],s);
+			}
+			str1 += "]";
+			return str1;
+		}
+		var tostr;
+		try {
+			tostr = o.toString;
+		} catch( e ) {
+			return "???";
+		}
+		if(tostr != null && tostr != Object.toString && typeof(tostr) == "function") {
+			var s2 = o.toString();
+			if(s2 != "[object Object]") {
+				return s2;
+			}
+		}
+		var k = null;
+		var str2 = "{\n";
+		s += "\t";
+		var hasp = o.hasOwnProperty != null;
+		for( var k in o ) {
+		if(hasp && !o.hasOwnProperty(k)) {
+			continue;
+		}
+		if(k == "prototype" || k == "__class__" || k == "__super__" || k == "__interfaces__" || k == "__properties__") {
+			continue;
+		}
+		if(str2.length != 2) {
+			str2 += ", \n";
+		}
+		str2 += s + k + " : " + js_Boot.__string_rec(o[k],s);
+		}
+		s = s.substring(1);
+		str2 += "\n" + s + "}";
+		return str2;
+	case "string":
+		return o;
+	default:
+		return String(o);
 	}
 };
 js_Boot.__nativeClassName = function(o) {
